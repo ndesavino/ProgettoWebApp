@@ -1,66 +1,74 @@
+// Importiamo il modello Reservation per interagire con le prenotazioni nel database
 const Reservation = require('../models/Reservation');
-const CAPIENZA_MASSIMA = 50;
 
+// 1. CREA UNA NUOVA PRENOTAZIONE
+// Questa funzione salva un nuovo tavolo
+// Sarà protetta dal middleware "auth.js"
 exports.createReservation = async (req, res) => {
     try {
-        const { name, email, phone, date, timeSlot, numberOfGuests, notes } = req.body;
+        // Estraiamo data, ora e numero di persone inviati dal frontend
+        const { date, time, numberOfPeople } = req.body;
 
-        const searchDate = new Date(date);
-        const startOfDay = new Date(searchDate.setHours(0, 0, 0, 0));
-        const endOfDay = new Date(searchDate.setHours(23, 59, 59, 999));
-
-        const existingReservations = await Reservation.find({
-            date: { $gte: startOfDay, $lte: endOfDay },
-            timeSlot: timeSlot,
-            status: 'confirmed'
-        });
-
-        const ospitiAttuali = existingReservations.reduce((totale, res) => totale + res.numberOfGuests, 0);
-
-        if (ospitiAttuali + Number(numberOfGuests) > CAPIENZA_MASSIMA) {
-            return res.status(400).json({
-                success: false,
-                message: `Posti insufficienti per questo turno. Posti rimasti: ${CAPIENZA_MASSIMA - ospitiAttuali}`
-            });
-        }
-
-        // Creazione prenotazione associata all'ID dell'utente loggato (req.user.id)
+        // Creiamo la nuova prenotazione
+        // req.user.id esiste grazie al nostro middleware auth.js che lo ha estratto dal token
         const newReservation = new Reservation({
-            user: req.user.id, // Collegamento all'account del cliente
-            name,
-            email,
-            phone,
-            date: startOfDay,
-            timeSlot,
-            numberOfGuests,
-            notes
+            user: req.user.id, // Colleghiamo la prenotazione a chi ha fatto la richiesta
+            date,
+            time,
+            numberOfPeople
         });
 
+        // Salviamo la prenotazione nel database
         await newReservation.save();
 
+        // Essendo una creazione, usiamo il codice HTTP 201 (Created)
         res.status(201).json({
-            success: true,
-            message: 'Prenotazione registrata con successo',
-            data: newReservation
+            message: 'Prenotazione confermata con successo',
+            reservation: newReservation
         });
-
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Errore interno', error: error.message });
+        // Se l'orario è sbagliato o le persone sono > 20, Mongoose lancerà un errore di validazione (codice HTTP 400)
+        res.status(400).json({ message: 'Errore nella creazione della prenotazione', error: error.message });
     }
 };
 
-// Modificato: Restituisce SOLO le prenotazioni dell'utente che fa la richiesta
-exports.getReservations = async (req, res) => {
+// 2. VISUALIZZA LE TUE PRENOTAZIONI
+// Questa funzione permette a un utente di vedere solo le sue prenotazioni
+exports.getUserReservations = async (req, res) => {
     try {
-        // Cerca solo i documenti dove il campo 'user' corrisponde all'ID del token
-        const reservations = await Reservation.find({ user: req.user.id }).sort({ date: 1, timeSlot: 1 });
+        // Cerchiamo nel db tutte le prenotazioni in cui il campo "user" coincide con l'id estratto dal token
+        // Usiamo sort({ date: 1 }) per ordinarle cronologicamente (dalla più vicina alla più lontana)
+        const reservations = await Reservation.find({ user: req.user.id }).sort({ date: 1 });
 
-        res.status(200).json({
-            success: true,
-            count: reservations.length,
-            data: reservations
-        });
+        // Rispondiamo con codice HTTP 200 (OK) e inviamo l'array delle prenotazioni trovate
+        res.status(200).json(reservations);
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Errore nel recupero', error: error.message });
+        // Se c'è un errore imprevisto, rispondiamo con errore HTTP 500 (Internal Server Error)
+        res.status(500).json({ message: 'Errore nel recupero delle prenotazioni', error: error.message });
+    }
+};
+
+// 3. CANCELLA UNA PRENOTAZIONE
+// Elimina una prenotazione specifica tramite il suo id
+exports.deleteReservation = async (req, res) => {
+    try {
+        // req.params.id rappresenta l'id della prenotazione passato nell'URL (es. /api/reservations/123)
+        const reservationId = req.params.id;
+
+        // Cerchiamo la prenotazione e ci assicuriamo che appartenga all'utente che sta facendo la richiesta
+        const reservation = await Reservation.findOneAndDelete({
+            _id: reservationId,
+            user: req.user.id
+        });
+
+        // Se non troviamo la prenotazione, o non è di questo utente, restituiamo il codice HTTP 404 (Not Found)
+        if (!reservation) {
+            return res.status(404).json({ message: 'Prenotazione non trovata o non autorizzata.' });
+        }
+
+        // Il codice HTTP 204 (No Content) per le eliminazioni
+        res.status(204).send();
+    } catch (error) {
+        res.status(500).json({ message: 'Errore durante la cancellazione.', error: error.message });
     }
 };
