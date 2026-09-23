@@ -1,5 +1,7 @@
 // Importiamo le librerie fondamentali
 const express = require('express');
+const http = require('http'); 
+const { Server } = require('socket.io')
 const mongoose = require('mongoose');
 const cors = require('cors');
 
@@ -18,6 +20,24 @@ const swaggerSpec = require('./swagger');
 
 // Inizializziamo l'applicazione Express
 const app = express();
+const server = http.createServer(app);
+
+
+// Configurazione Socket.IO 
+const io = new Server(server, {
+    cors: { origin: 'http://localhost:5173' }
+});
+io.on('connection', (socket) => {
+    console.log(`Utente connesso (Socket ID: ${socket.id})`);
+    
+    // Invia un messaggio di benvenuto alla Dashboard React!
+    socket.emit('notifica-server', 'Ciao dal Server Backend! Connessione live stabilita.');
+    
+    socket.on('disconnect', () => {
+        console.log(`Utente disconnesso`);
+    });
+});
+
 
 // MIDDLEWARE GLOBALI
 // cors() permette al frontend React (che girerà su una porta diversa) di fare richieste a questo backend senza essere bloccato dal browser
@@ -46,7 +66,5 @@ app.use('/api/reservations', reservationRoutes);
 
 // AVVIO DEL SERVER
 const PORT = process.env.PORT || 3000; // Leggiamo la porta dal file .env o usiamo la 3000 come predefinita
-app.listen(PORT, () => {
-    console.log(`Server del in ascolto sulla porta ${PORT}`);
-    console.log(`Documentazione API disponibile su: http://localhost:3000/api-docs`);
-});
+server.listen(PORT, () => {
+    console.log(`Server Express e Socket.IO in ascolto sulla porta ${PORT}`);});
