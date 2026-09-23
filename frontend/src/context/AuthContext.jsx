@@ -27,3 +27,11 @@ export const AuthProvider = ({ children }) => {
         </AuthContext.Provider>
     );
 };
+
+
+// Funzione di logout
+
+const logout = () => {
+    localStorage.removeItem('token');
+    setUser(null);
+};
