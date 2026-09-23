@@ -9,12 +9,9 @@ export const AuthProvider = ({ children }) => {
     // Funzione asincrona per il login
     const login = async (email, password) => {
         try {
-            // TEMPORANEO: finché non abbiamo il backend, simuliamo il successo!
-            // const response = await api.post("/auth/login", { email, password });
-            // const { token, userData } = response.data;
-            
-            const token = "mock_token_123";
-            const userData = { username: "Studente", email: email };
+            // Chiamata HTTP POST al backend
+            const response = await api.post("/auth/login", { email, password });
+            const { token, userData } = response.data;
             
             localStorage.setItem("token", token);
             setUser(userData);
