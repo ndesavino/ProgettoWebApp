@@ -1,5 +1,5 @@
-import React, { createContext, useState, useEffect } from 'react';
-import api from '../services/api';
+import React, { createContext, useState, useEffect } from "react";
+import api from "../services/api";
 
 export const AuthContext = createContext();
 
@@ -9,11 +9,14 @@ export const AuthProvider = ({ children }) => {
     // Funzione asincrona per il login
     const login = async (email, password) => {
         try {
-            // Chiamata HTTP POST al backend
-            const response = await api.post('/auth/login', { email, password });
-            const { token, userData } = response.data; // Destrutturazione
+            // TEMPORANEO: finché non abbiamo il backend, simuliamo il successo!
+            // const response = await api.post("/auth/login", { email, password });
+            // const { token, userData } = response.data;
             
-            localStorage.setItem('token', token);
+            const token = "mock_token_123";
+            const userData = { username: "Studente", email: email };
+            
+            localStorage.setItem("token", token);
             setUser(userData);
         } catch (error) {
             console.error("Errore di login", error);
@@ -21,24 +24,15 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    return (
-        <AuthContext.Provider value={{ user, login }}>
-            {children}
-        </AuthContext.Provider>
-    );
-};
-
-
-// Funzione di logout
-
-const logout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
+    // Funzione di logout
+    const logout = () => {
+        localStorage.removeItem("token");
+        setUser(null);
+    };
 
     return (
         <AuthContext.Provider value={{ user, login, logout }}>
             {children}
         </AuthContext.Provider>
-    )
+    );
 };
-
