@@ -42,6 +42,18 @@ export default function Dashboard() {
             alert("Errore nella prenotazione");
         }
     };
+    
+    const handleDelete = async (id) => {
+    if (window.confirm("Sei sicuro di voler disdire questa prenotazione?")) {
+        try {
+            await api.delete(`/reservations/${id}`);
+            alert("Prenotazione cancellata!");
+            fetchReservations(); // Ricarica la lista per farla sparire
+        } catch (error) {
+            alert("Errore durante la disdetta");
+        }
+    }
+};
 
     return (
         <Box sx={{ p: 3, maxWidth: 800, margin: 'auto' }}>
@@ -50,23 +62,19 @@ export default function Dashboard() {
             </Typography>
 
             {/* FORM DI PRENOTAZIONE */}
-            <Paper sx={{ p: 3, mb: 4, mt: 2 }} elevation={3}>
-                <Typography variant="h6" gutterBottom>Prenota un nuovo Tavolo</Typography>
-                <form onSubmit={handleBookTable}>
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} sm={4}>
-                            <TextField fullWidth type="date" value={date} onChange={e => setDate(e.target.value)} required />
-                        </Grid>
-                        <Grid item xs={12} sm={4}>
-                            <TextField fullWidth type="time" value={time} onChange={e => setTime(e.target.value)} required />
-                        </Grid>
-                        <Grid item xs={12} sm={4}>
-                            <TextField fullWidth type="number" label="Persone" inputProps={{ min: 1 }} value={people} onChange={e => setPeople(e.target.value)} required />
-                        </Grid>
-                    </Grid>
-                    <Button type="submit" variant="contained" sx={{ mt: 2 }}>Conferma Prenotazione</Button>
-                </form>
-            </Paper>
+            <Paper key={res._id} sx={{ p: 2, mb: 2, borderLeft: '5px solid #1976d2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <Box>
+        <Typography variant="body1">
+            📅 Data: <strong>{new Date(res.date).toLocaleDateString()}</strong> alle <strong>{res.time}</strong>
+        </Typography>
+        <Typography variant="body2" color="textSecondary">
+            👥 Persone: {res.numberOfPeople}
+        </Typography>
+    </Box>
+    <Button variant="outlined" color="error" onClick={() => handleDelete(res._id)}>
+        Disdici
+    </Button>
+</Paper>
 
             <Divider sx={{ my: 3 }} />
 
