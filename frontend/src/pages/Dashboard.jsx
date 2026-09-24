@@ -8,7 +8,8 @@ export default function Dashboard() {
     const { user } = useContext(AuthContext);
     const [reservations, setReservations] = useState([]);
     
-    const [date, setDate] = useState("");
+    const today = new Date().toISOString().split('T')[0];
+    const [date, setDate] = useState(today); // Inizializzato a oggi per evitare l'overlapping della label!
     const [time, setTime] = useState("19:30");
     const [people, setPeople] = useState(2);
 
@@ -72,7 +73,7 @@ export default function Dashboard() {
 
             <Paper sx={{ p: 4, mb: 5, borderRadius: 3, bgcolor: "rgba(255, 255, 255, 0.95)", boxShadow: 5 }} elevation={3}>
                 <Typography variant="h5" gutterBottom sx={{ display: "flex", alignItems: "center", mb: 3 }}>
-                    ?? Riserva il tuo Tavolo
+                    🥂 Riserva il tuo Tavolo
                 </Typography>
                 <form onSubmit={handleBookTable}>
                     <Grid container spacing={3}>
@@ -117,13 +118,13 @@ export default function Dashboard() {
                             <Paper sx={{ p: 3, borderRadius: 3, borderLeft: "6px solid", borderColor: "secondary.main", bgcolor: "rgba(255, 255, 255, 0.95)", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: 3, transition: "0.3s", "&:hover": { boxShadow: 8, transform: "translateY(-2px)" } }}>
                                 <Box>
                                     <Typography variant="h6" color="primary.main">
-                                        ?? {new Date(res.date).toLocaleDateString()}
+                                        📅 {new Date(res.date).toLocaleDateString()}
                                     </Typography>
                                     <Typography variant="body1" sx={{ mt: 0.5 }}>
-                                        ? Ore: <strong>{res.time}</strong>
+                                        ⏰ Ore: <strong>{res.time}</strong>
                                     </Typography>
                                     <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                                        ?? Tavolo per {res.numberOfPeople} persone
+                                        👥 Tavolo per {res.numberOfPeople} persone
                                     </Typography>
                                 </Box>
                                 <Button variant="outlined" color="error" size="small" onClick={() => handleDelete(res._id)}>
