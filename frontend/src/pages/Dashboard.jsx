@@ -1,39 +1,91 @@
-import React, { useEffect, useState } from 'react';
-import { io } from 'socket.io-client';
-import { Typography, Box, Paper } from '@mui/material';
+import React, { useEffect, useState, useContext } from 'react';
+import api from '../services/api';
+import { AuthContext } from '../context/AuthContext';
+import { Typography, Box, Paper, TextField, Button, Grid, Divider } from '@mui/material';
 
 export default function Dashboard() {
-    const [messages, setMessages] = useState([]);
+    const { user } = useContext(AuthContext);
+    const [reservations, setReservations] = useState([]);
+    
+    // Campi per la nuova prenotazione
+    const [date, setDate] = useState('');
+    const [time, setTime] = useState('');
+    const [people, setPeople] = useState(2);
 
+    // Effettua la GET al caricamento della pagina
     useEffect(() => {
-        // 1. Stabilisce la connessione con il backend all'avvio del componente
-        const socket = io('http://localhost:5000');
+        fetchReservations();
+    }, []);
 
-        // 2. Ascolta l'evento 'notifica-server'
-        socket.on('notifica-server', (data) => {
-            setMessages((prevMessages) => [...prevMessages, data]);
-        });
+    const fetchReservations = async () => {
+        try {
+            // Nota l'URL RESTful /reservations. Il backend usa il Token per capire chi è l'utente
+            const response = await api.get('/reservations');
+            setReservations(response.data);
+        } catch (error) {
+            console.error("Errore nel recuperare le prenotazioni");
+        }
+    };
 
-        // 3. Cleanup: quando l'utente cambia pagina, chiudiamo la connessione
-        return () => {
-            socket.disconnect();
-        };
-    }, []); // L'array vuoto fa eseguire questo hook solo al montaggio del componente
+    const handleBookTable = async (e) => {
+        e.preventDefault();
+        try {
+            // POST per creare una prenotazione (REST API)
+            await api.post('/reservations', {
+                date: date,
+                time: time,
+                numberOfPeople: people
+            });
+            alert("Tavolo prenotato con successo!");
+            fetchReservations(); // Ricarica la lista per mostrare l'aggiornamento
+        } catch (error) {
+            alert("Errore nella prenotazione");
+        }
+    };
 
     return (
-        <Box sx={{ p: 3 }}>
-            <Typography variant="h4" gutterBottom>Dashboard</Typography>
-            <Typography variant="subtitle1">Qui vedrai i messaggi real-time:</Typography>
-            
-            <Paper sx={{ p: 2, mt: 2, minHeight: 150 }}>
-                {messages.length === 0 ? (
-                    <Typography color="textSecondary">In attesa di notifiche...</Typography>
-                ) : (
-                    messages.map((msg, index) => (
-                        <Typography key={index} color="primary">- {msg}</Typography>
-                    ))
-                )}
+        <Box sx={{ p: 3, maxWidth: 800, margin: 'auto' }}>
+            <Typography variant="h4" gutterBottom>
+                Benvenuto, {user?.name || "Ospite"}!
+            </Typography>
+
+            {/* FORM DI PRENOTAZIONE */}
+            <Paper sx={{ p: 3, mb: 4, mt: 2 }} elevation={3}>
+                <Typography variant="h6" gutterBottom>Prenota un nuovo Tavolo</Typography>
+                <form onSubmit={handleBookTable}>
+                    <Grid container spacing={2}>
+                        <Grid item xs={12} sm={4}>
+                            <TextField fullWidth type="date" value={date} onChange={e => setDate(e.target.value)} required />
+                        </Grid>
+                        <Grid item xs={12} sm={4}>
+                            <TextField fullWidth type="time" value={time} onChange={e => setTime(e.target.value)} required />
+                        </Grid>
+                        <Grid item xs={12} sm={4}>
+                            <TextField fullWidth type="number" label="Persone" inputProps={{ min: 1 }} value={people} onChange={e => setPeople(e.target.value)} required />
+                        </Grid>
+                    </Grid>
+                    <Button type="submit" variant="contained" sx={{ mt: 2 }}>Conferma Prenotazione</Button>
+                </form>
             </Paper>
+
+            <Divider sx={{ my: 3 }} />
+
+            {/* LISTA PRENOTAZIONI EFFETTUATE */}
+            <Typography variant="h5" gutterBottom>Le tue Prenotazioni</Typography>
+            {reservations.length === 0 ? (
+                <Typography color="textSecondary">Non hai ancora prenotato alcun tavolo.</Typography>
+            ) : (
+                reservations.map((res) => (
+                    <Paper key={res._id} sx={{ p: 2, mb: 2, borderLeft: '5px solid #1976d2' }}>
+                        <Typography variant="body1">
+                            📅 Data: <strong>{new Date(res.date).toLocaleDateString()}</strong> alle <strong>{res.time}</strong>
+                        </Typography>
+                        <Typography variant="body2" color="textSecondary">
+                            👥 Persone: {res.numberOfPeople}
+                        </Typography>
+                    </Paper>
+                ))
+            )}
         </Box>
     );
 }
