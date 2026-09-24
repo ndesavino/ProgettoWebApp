@@ -35,6 +35,9 @@ export default function Login() {
                     Entra
                 </Button>
             </form>
+            <Box sx={{ mt: 2, textAlign: 'center' }}>
+                <Link to="/register">Non hai un account? Registrati</Link>
+            </Box>
         </Box>
     );
 }
