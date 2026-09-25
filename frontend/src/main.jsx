@@ -11,14 +11,13 @@ import CssBaseline from '@mui/material/CssBaseline';
 // Creiamo un tema personalizzato con i colori di un Ristorante (es. Rosso scuro e Oro)
 const theme = createTheme({
   palette: {
-    primary: { main: '#7b1fa2' }, // Un melanzana/vino elegante
+    primary: { main: '#800020' }, // Bordeaux scuro ed elegante
     secondary: { main: '#d4af37' }, // Oro puro
     text: {
-      primary: '#2c2c2c',
+      primary: '#202020',
     }
   },
   typography: {
-    // Usiamo Playfair per i titoli (eleganza) e Lora per la lettura
     fontFamily: '"Lora", "Georgia", serif',
     h4: { fontFamily: '"Playfair Display", serif', fontWeight: 700 },
     h5: { fontFamily: '"Playfair Display", serif', fontWeight: 600 },
@@ -28,8 +27,8 @@ const theme = createTheme({
     MuiCssBaseline: {
       styleOverrides: {
         body: {
-          // Immagine di sfondo globale di un ristorante elegante (Unsplash)
-          backgroundImage: 'url("https://images.unsplash.com/photo-1514933651103-005eec06c04b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80")',
+          // Aggiungiamo una "patina" nera al 65% sopra l'immagine per scurirla e creare contrasto!
+          backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.75)), url("https://images.unsplash.com/photo-1514933651103-005eec06c04b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80")',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundAttachment: 'fixed',

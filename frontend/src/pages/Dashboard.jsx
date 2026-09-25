@@ -61,7 +61,7 @@ export default function Dashboard() {
     return (
         <Box sx={{ p: 3, maxWidth: 900, margin: "auto" }}>
             
-            <Paper sx={{ p: 4, mb: 5, mt: 2, borderRadius: 3, bgcolor: "rgba(255, 255, 255, 0.90)", boxShadow: 5, textAlign: "center" }}>
+            <Paper sx={{ p: 4, mb: 5, mt: 2, borderRadius: 4, bgcolor: "#ffffff", boxShadow: 8, textAlign: "center" }}>
                 <Typography variant="h4" gutterBottom sx={{ color: "primary.main" }}>
                     Benvenuto a "La Pergola", {user?.name || "Ospite"}
                 </Typography>
@@ -71,7 +71,7 @@ export default function Dashboard() {
                 </Typography>
             </Paper>
 
-            <Paper sx={{ p: 4, mb: 5, borderRadius: 3, bgcolor: "rgba(255, 255, 255, 0.95)", boxShadow: 5 }} elevation={3}>
+            <Paper sx={{ p: 4, mb: 5, borderRadius: 4, bgcolor: "#ffffff", boxShadow: 8 }} elevation={4}>
                 <Typography variant="h5" gutterBottom sx={{ display: "flex", alignItems: "center", mb: 3 }}>
                     🥂 Riserva il tuo Tavolo
                 </Typography>
@@ -96,28 +96,28 @@ export default function Dashboard() {
                         </Grid>
                     </Grid>
                     <Box sx={{ mt: 3, textAlign: "right" }}>
-                        <Button type="submit" variant="contained" color="secondary" size="large" sx={{ fontWeight: "bold", color: "white" }}>
+                        <Button type="submit" variant="contained" color="secondary" size="large" sx={{ fontWeight: "bold", color: "#000" }}>
                             Conferma Prenotazione
                         </Button>
                     </Box>
                 </form>
             </Paper>
 
-            <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold", color: "white", textShadow: "2px 2px 4px rgba(0,0,0,0.8)" }}>
-                Le tue Prenotazioni Attive
+            <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold", color: "white", textShadow: "2px 2px 8px rgba(0,0,0,0.9)", mt: 5 }}>
+                Le tue Prenotazioni
             </Typography>
             
             {reservations.length === 0 ? (
-                <Paper sx={{ p: 4, textAlign: "center", bgcolor: "rgba(255, 255, 255, 0.85)", borderRadius: 3 }}>
+                <Paper sx={{ p: 4, textAlign: "center", bgcolor: "#ffffff", borderRadius: 4 }}>
                     <Typography color="textSecondary" variant="h6">Non hai ancora prenotato alcun tavolo. Ti aspettiamo!</Typography>
                 </Paper>
             ) : (
                 <Grid container spacing={3} sx={{ mt: 1 }}>
                     {reservations.map((res) => (
                         <Grid item xs={12} md={6} key={res._id}>
-                            <Paper sx={{ p: 3, borderRadius: 3, borderLeft: "6px solid", borderColor: "secondary.main", bgcolor: "rgba(255, 255, 255, 0.95)", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: 3, transition: "0.3s", "&:hover": { boxShadow: 8, transform: "translateY(-2px)" } }}>
+                            <Paper sx={{ p: 3, borderRadius: 4, borderLeft: "8px solid", borderColor: "secondary.main", bgcolor: "#ffffff", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: 6, transition: "0.3s", "&:hover": { boxShadow: 12, transform: "translateY(-4px)" } }}>
                                 <Box>
-                                    <Typography variant="h6" color="primary.main">
+                                    <Typography variant="h6" color="primary.main" sx={{ fontWeight: 'bold' }}>
                                         📅 {new Date(res.date).toLocaleDateString()}
                                     </Typography>
                                     <Typography variant="body1" sx={{ mt: 0.5 }}>
@@ -135,6 +135,38 @@ export default function Dashboard() {
                     ))}
                 </Grid>
             )}
+
+            <Divider sx={{ my: 5, bgcolor: 'rgba(255,255,255,0.2)' }} />
+
+            {/* SEZIONE DOVE SIAMO - GOOGLE MAPS */}
+            <Typography variant="h4" gutterBottom sx={{ fontWeight: "bold", color: "white", textShadow: "2px 2px 8px rgba(0,0,0,0.9)", mt: 4 }}>
+                Dove Siamo
+            </Typography>
+            <Paper sx={{ p: 2, borderRadius: 4, bgcolor: "#ffffff", boxShadow: 8 }}>
+                <Typography variant="h6" gutterBottom color="primary.main" sx={{ fontWeight: 'bold' }}>
+                    📍 La Pergola c/o Dipartimento DEI, Politecnico di Bari
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Via Edoardo Orabona, 4, 70125 Bari BA
+                </Typography>
+                
+                {/* Iframe pulito e responsive di Google Maps */}
+                <Box sx={{ width: '100%', height: '400px', borderRadius: '12px', overflow: 'hidden' }}>
+                    <iframe 
+                        width="100%" 
+                        height="100%" 
+                        frameBorder="0" 
+                        scrolling="no" 
+                        marginHeight="0" 
+                        marginWidth="0" 
+                        src="https://www.google.com/maps?q=Dipartimento+DEI+Politecnico+di+Bari&output=embed"
+                        title="Mappa Ristorante"
+                        style={{ border: 0 }}
+                        allowFullScreen
+                    ></iframe>
+                </Box>
+            </Paper>
+
         </Box>
     );
 }
