@@ -25,7 +25,7 @@ const server = http.createServer(app);
 
 // Configurazione Socket.IO 
 const io = new Server(server, {
-    cors: { origin: 'http://localhost:5173' }
+    cors: { origin: '*' }
 });
 io.on('connection', (socket) => {
     console.log(`Utente connesso (Socket ID: ${socket.id})`);
