@@ -38,9 +38,7 @@ io.on('connection', (socket) => {
     });
 });
 
-// Salviamo l'istanza di Socket.IO dentro l'oggetto "app" globale di Express
-// Questo ci permetterà di accedervi liberamente da dentro qualsiasi controller!
-app.set('socketio', io);
+
 
 // MIDDLEWARE GLOBALI
 // cors() permette al frontend React (che girerà su una porta diversa) di fare richieste a questo backend senza essere bloccato dal browser
