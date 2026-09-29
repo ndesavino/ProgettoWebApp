@@ -67,7 +67,7 @@ exports.login = async (req, res) => {
         );
 
         // Rispondiamo con codice HTTP 200 (OK) e inviamo il token al frontend
-        res.status(200).json({ message: 'Login effettuato con successo', token });
+        res.status(200).json({ message: 'Login effettuato con successo', token, userData: { id: user._id, name: user.name, email: user.email }  });
     } catch (error) {
         res.status(500).json({ message: 'Errore durante il login', error: error.message });
     }
