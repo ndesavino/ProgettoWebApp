@@ -18,7 +18,7 @@ exports.register = async (req, res) => {
             return res.status(400).json({ message: 'Un utente con questa email esiste già' });
         }
 
-        // Creiamo una nuova istanza (documento) dell'utente con i dati ricevuti
+        // Creiamo una nuova istanza dell'utente con i dati ricevuti
         const newUser = new User({
             name,
             email,

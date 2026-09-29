@@ -27,6 +27,12 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: [true, 'La password è obbligatoria'],
         minlength: [6, 'La password deve avere almeno 6 caratteri'] // Validazione di sicurezza base
+    },
+    role: {
+        type: String,
+        enum: ['user', 'admin'],
+        // Se non specifichiamo nulla durante la registrazione, diventa 'user' di default
+        default: 'user'
     }
 }, {
     // timestamps aggiunge automaticamente due campi al database: createdAt (data creazione) e updatedAt (data ultima modifica)
