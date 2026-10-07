@@ -98,7 +98,7 @@ const options = {
         // Qui mappiamo a mano tutte le rotte e i codici di risposta (200, 201, 204, 400, 500, ecc.)
         paths: {
             "/api/auth/register": {
-                post: {
+                post: { // POST
                     tags: ["AuthController"],
                     summary: "Registrazione di un nuovo utente",
                     requestBody: {
@@ -133,7 +133,7 @@ const options = {
                 },
             },
             "/api/auth/login": {
-                post: {
+                post: { // POST
                     tags: ["AuthController"],
                     summary: "Login di un utente",
                     requestBody: {
@@ -159,7 +159,7 @@ const options = {
                 },
             },
             "/api/reservations": {
-                get: {
+                get: { // GET
                     tags: ["ReservationController"],
                     summary: "Ottieni le prenotazioni dell'utente autenticato",
                     security: [{ bearerAuth: [] }], // Richiede il token
@@ -182,7 +182,7 @@ const options = {
                         },
                     },
                 },
-                post: {
+                post: { // POST
                     tags: ["ReservationController"],
                     summary: "Crea una nuova prenotazione",
                     security: [{ bearerAuth: [] }], // Richiede il token
@@ -219,7 +219,51 @@ const options = {
                 },
             },
             "/api/reservations/{id}": {
-                delete: {
+                put: { // PUT
+                    tags: ["ReservationController"],
+                    summary: "Modifica una prenotazione",
+                    security: [{ bearerAuth: [] }],
+                    parameters: [
+                        {
+                            name: "id",
+                            in: "path",
+                            required: true,
+                            schema: { type: "string" },
+                            description: "Id della prenotazione da modificare",
+                        },
+                    ],
+                    requestBody: {
+                        required: true,
+                        content: {
+                            "application/json": { schema: { $ref: "#/components/schemas/ReservationRequest" } },
+                        },
+                    },
+                    responses: {
+                        200: {
+                            description: "Prenotazione aggiornata con successo",
+                            content: {
+                                "application/json": {
+                                    schema: {
+                                        type: "object",
+                                        properties: {
+                                            message: { type: "string", example: "Prenotazione aggiornata con successo" },
+                                            reservation: { $ref: "#/components/schemas/Reservation" },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                        400: {
+                            description: "Dati non validi o turno pieno",
+                            content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
+                        },
+                        500: {
+                            description: "Errore interno",
+                            content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
+                        },
+                    },
+                },
+                delete: { // DELETE
                     tags: ["ReservationController"],
                     summary: "Elimina una prenotazione",
                     security: [{ bearerAuth: [] }], // Richiede il token

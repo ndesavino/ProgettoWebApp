@@ -4,8 +4,8 @@ const mongoose = require('mongoose');
 // Importiamo bcryptjs, una libreria essenziale per criptare le password (hashing)
 const bcrypt = require('bcryptjs');
 
-// 1. DEFINIZIONE DELLO SCHEMA (REGISTER)
-// Creiamo lo "stampino" per l'utente
+// 1. REGISTER
+// Definiamo lo schema Mongoose e delle relative regole di validazione
 // Nessun utente potrà essere salvato se non rispetta rigorosamente queste regole
 const userSchema = new mongoose.Schema({
     name: {
@@ -30,33 +30,30 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['user', 'admin'],
+        enum: ['client', 'admin'],
         // Se non specifichiamo nulla durante la registrazione, diventa 'user' di default
-        default: 'user'
+        default: 'client'
     }
 }, {
     // timestamps aggiunge automaticamente due campi al database: createdAt (data creazione) e updatedAt (data ultima modifica)
     timestamps: true
 });
 
-
-// 2. MIDDLEWARE DI MONGOOSE (SICUREZZA)
-// Questo blocco di codice scatta in automatico prima (pre) che l'utente venga salvato (save) nel database
-// Serve a non salvare mai la password "in chiaro". In Mongoose 9 con async non serve usare la funzione 'next()'
+// 2. MIDDLEWARE DI MONGOOSE
+// Middleware pre-save (richiamato in automatico prima che l'utente venga salvato)
+// per eseguire l'hashing della password prima della persistenza nel database
+// Previene il salvataggio delle credenziali non criptate
 userSchema.pre('save', async function() {
-    // 'this' rappresenta il documento dell'utente che stiamo per salvare.
-    // Se la password non è stata modificata (es. se l'utente sta solo cambiando il proprio nome), passiamo oltre con 'return'.
+    // Applica l'hashing solo se il campo password è stato effettivamente modificato
     if (!this.isModified('password')) return;
-
-    // Generiamo "salt", un valore casuale che rende la crittografia ancora più sicura e imprevedibile
+    // Generazione del salt crittografico (10 rounds) per la sicurezza dell'hash
     const salt = await bcrypt.genSalt(10);
-    // Sovrascriviamo la password in chiaro con quella criptata
+    // Sostituzione della password non criptata con l'hash generato
     this.password = await bcrypt.hash(this.password, salt);
 });
 
-
-// 3. METODO DI ISTANZA (LOGIN)
-// Creiamo una funzione personalizzata che useremo nel Controller durante il Login
+// 3. LOGIN
+// Creiamo un metodo di istanza che useremo nel controller durante il login
 // Prende la password inserita dall'utente (candidatePassword) e la confronta con quella criptata nel database
 userSchema.methods.comparePassword = async function(candidatePassword) {
     // bcrypt.compare() capisce se la password in chiaro corrisponde all'hash senza doverla decriptare restituendo true o false

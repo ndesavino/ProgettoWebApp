@@ -5,7 +5,7 @@ const { Server } = require('socket.io')
 const mongoose = require('mongoose');
 const cors = require('cors');
 
-// Importiamo dotenv per leggere le variabili d'ambiente (il file .env)
+// Importiamo dotenv per leggere le variabili d'ambiente (.env)
 require('dotenv').config();
 
 // Importiamo i nostri file di rotte
@@ -22,23 +22,18 @@ const swaggerSpec = require('./swagger');
 const app = express();
 const server = http.createServer(app);
 
-
 // Configurazione Socket.IO 
 const io = new Server(server, {
     cors: { origin: '*' }
 });
+app.set('socketio', io); // Salviamo l'istanza di Socket.IO dentro Express cosi i controller possono usarla
 io.on('connection', (socket) => {
     console.log(`Utente connesso (Socket ID: ${socket.id})`);
-    
-    // Invia un messaggio di benvenuto alla Dashboard React!
-    socket.emit('notifica-server', 'Ciao dal Server Backend! Connessione live stabilita.');
-    
+    socket.emit('notifica-server', 'Ciao dal server backend! Connessione live stabilita.');
     socket.on('disconnect', () => {
         console.log(`Utente disconnesso`);
     });
 });
-
-
 
 // MIDDLEWARE GLOBALI
 // cors() permette al frontend React (che girerà su una porta diversa) di fare richieste a questo backend senza essere bloccato dal browser
@@ -53,16 +48,13 @@ mongoose.connect(process.env.MONGODB_URI)
     .catch((err) => console.error('Errore di connessione a MongoDB:', err));
 
 // MONTAGGIO DI SWAGGER SULLA ROTTA /api-docs
-// Diciamo ad Express di mostrare l'interfaccia interattiva di Swagger,
-// quando qualcuno va su http://localhost:3000/api-docs
-// swaggerUi.serve prepara i file statici grafici,
-// swaggerUi.setup(swaggerSpec) inietta i dati della nostra API
+// Configurazione dell'endpoint per la documentazione Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // AGGANCIO DELLE ROTTE DELLE NOSTRE API
-// Diciamo ad Express di passare tutte le richieste HTTP, che iniziano per /api/auth, al router authRoutes.js"
+// Diciamo a Express di passare tutte le richieste HTTP, che iniziano per /api/auth, al router "authRoutes.js"
 app.use('/api/auth', authRoutes);
-// Diciamo ad Express di passare tutte le richieste HTTP, che iniziano per /api/reservations, al router reservationRoutes.js"
+// Diciamo a Express di passare tutte le richieste HTTP, che iniziano per /api/reservations, al router "reservationRoutes.js"
 app.use('/api/reservations', reservationRoutes);
 
 // AVVIO DEL SERVER

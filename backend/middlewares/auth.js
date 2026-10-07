@@ -2,21 +2,22 @@
 const jwt = require('jsonwebtoken');
 
 // MIDDLEWARE DI AUTENTICAZIONE
-// Questa funzione si interpone tra la richiesta dell'utente e il controller.
-// Se l'utente possiede un token valido la richiesta passa, altrimenti viene respinta con errore HTTP 401
+// Questa funzione si interpone tra la richiesta dell'utente e il controller
+// Se l'utente possiede un token valido la richiesta passa,
+// altrimenti viene respinta con errore HTTP 401
 const auth = (req, res, next) => {
     // 1. ESTRAZIONE DEL TOKEN
     // Cerca l'header 'Authorization' nella richiesta HTTP in arrivo
     const authHeader = req.header('Authorization');
-
-    // Se l'header manca o non rispetta lo standard (deve iniziare con 'Bearer '),
-    // blocchiamo l'accesso con il codice HTTP 401 (Unauthorized)
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ message: 'Accesso negato: token mancante o formato errato' });
+    // Controlliamo se l'header esiste e se inizia correttamente con "Bearer "
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+        // Usiamo split per dividere la stringa in corrispondenza dello spazio prendendo solo il token
+        token = authHeader.split(" ")[1];
     }
-
-    // Estraiamo il token vero e proprio (eliminando 'Bearer ')
-    const token = authHeader.replace('Bearer ', '');
+    // Se alla fine di tutto non abbiamo trovato nessun token, fermiamo l'utente
+    if (!token) {
+        return res.status(401).json({ message: "Token mancante o non fornito" });
+    }
 
     try {
         // 2. VERIFICA DEL TOKEN
@@ -30,7 +31,7 @@ const auth = (req, res, next) => {
         // In questo modo, i controllers successivi sapranno esattamente quale utente ha fatto la richiesta
         req.user = decoded;
 
-        // next() dice ad Express di che il controllo è superato e passare la richiesta alla funzione successiva (il controller)
+        // next() dice ad Express di che il controllo è superato e passare la richiesta alla funzione successiva (controller)
         next();
     } catch (err) {
         // Se la verifica fallisce (es. token scaduto o manomesso), fermiamo tutto e restituiamo errore HTTP 401

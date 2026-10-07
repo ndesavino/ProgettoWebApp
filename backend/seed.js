@@ -48,7 +48,7 @@ async function seed() {
             {
                 user: sample_user._id,
                 date: new Date("2026-06-20"),
-                time: "13:00",
+                time: "19:30",
                 numberOfPeople: 2,
                 status: "confermata"
             },
@@ -78,5 +78,4 @@ async function seed() {
     }
 }
 
-// Eseguiamo la funzione
-seed();
+seed(); // Eseguiamo la funzione
