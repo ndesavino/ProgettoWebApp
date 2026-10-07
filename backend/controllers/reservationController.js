@@ -43,7 +43,7 @@ exports.createReservation = async (req, res) => {
         // Recuperiamo Socket.IO globale ed emettiamo l'evento a tutti i client connessi (real-time)
         const io = req.app.get('socketio');
         if (io) {
-            io.emit('notifica-server', `Qualcuno ha appena prenotato un tavolo per ${numberOfPeople} persone in data ${date} alle ${time}!`);
+            io.emit('notifica-server', `Nuova prenotazione registrata per ${numberOfPeople} persone in data ${date} alle ${time}`);
         }
 
         // Essendo una creazione, usiamo il codice HTTP 201 (Created)
