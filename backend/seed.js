@@ -26,13 +26,32 @@ async function seed() {
         await Reservation.deleteMany({});
         console.log('Cleared existing data!');
 
+        // MODIFICA (ADMIN) -
+        // Creazione di un utente amministratore predefinito per il testing
+        const adminUser = await User.create({
+            name: "Amministratore",
+            email: "admin@admin.com",
+            password: "admin",
+            role: "admin"
+        });
+        console.log('Created admin user:', adminUser.email, adminUser.password);
+        // - MODIFICA
+
+        // Creazione di un utente cliente predefinito per il testing
+        const clientUser = await User.create({
+            name: "Cliente",
+            email: "client@client.com",
+            password: "client",
+            role: "client"
+        });
+        console.log('Created client user:', clientUser.email, clientUser.password);
+
         // Creiamo un utente di prova (sample user) specificando nome, email e password
         const sample_user = await User.create({
             name: "Mario Rossi",
             email: "mario.rossi@email.com",
             password: "password123"
         });
-
         console.log('Created user:', sample_user.name);
 
         // Definiamo un array di oggetti "prenotazione" con vari attributi come data, orario e numero di persone
@@ -78,4 +97,4 @@ async function seed() {
     }
 }
 
-seed(); // Eseguiamo la funzione
+seed(); // Eseguiamo

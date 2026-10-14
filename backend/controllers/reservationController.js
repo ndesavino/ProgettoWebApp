@@ -61,9 +61,25 @@ exports.createReservation = async (req, res) => {
 // Questa funzione permette di visualizzare a un utente solo le sue prenotazioni
 exports.getUserReservations = async (req, res) => {
     try {
+        // MODIFICA (ADMIN) -
+        let reservations;
+        // Implementazione del controllo accessi Se l'utente possiede il ruolo 'admin',
+        // viene restituita l'intera collezione aggregata ai riferimenti utente
+        if (req.user.role === 'admin') {
+            reservations = await Reservation.find({})
+                .populate('user', 'name email')
+                .sort({ date: 1, time: 1 });
+        }
+        // Se l'utente è standard ('client'), la query è filtrata sul proprio ID
+        else {
+            reservations = await Reservation.find({ user: req.user.id })
+                .sort({ date: 1, time: 1 });
+        }
+        // - MODIFICA
+
         // Cerchiamo nel db tutte le prenotazioni in cui il campo "user" coincide con l'id estratto dal token
         // Usiamo sort({ date: 1, time: 1 }) per ordinarle cronologicamente dalla più vicina alla più lontana
-        const reservations = await Reservation.find({ user: req.user.id }).sort({ date: 1, time: 1 });
+
         // Rispondiamo con codice HTTP 200 (OK) e inviamo l'array delle prenotazioni trovate
         res.status(200).json(reservations);
     } catch (error) {
@@ -89,9 +105,16 @@ exports.updateReservation = async (req, res) => {
             });
         }
 
+        // MODIFICA (ADMIN) -
+        // Costruiamo la query dinamicamente quindi se non è admin vincoliamo la ricerca anche all'id dell'utente
+        let query = { _id: reservationId };
+        if (req.user.role !== 'admin') {
+            query.user = req.user.id;
+        }
         // Cerchiamo la prenotazione e ci assicuriamo che appartenga a questo utente
-        // Esattamente la stessa logica che si usa per controllare l'autore di una recensione
-        const reservation = await Reservation.findOne({ _id: reservationId, user: req.user.id });
+        const reservation = await Reservation.findOne(query);
+        // - MODIFICA
+
         if (!reservation) {
             return res.status(404).json({ message: 'Prenotazione non trovata o non autorizzata' });
         }
@@ -139,11 +162,15 @@ exports.deleteReservation = async (req, res) => {
         // req.params.id rappresenta l'id della prenotazione passato nell'URL (/api/reservations/64b5f...)
         const reservationId = req.params.id;
 
+        // MODIFICA (ADMIN) -
+        // Costruiamo la query dinamicamente quindi se è admin rimuove qualsiasi prenotazione, altrimenti solo la propria
+        let query = { _id: reservationId };
+        if (req.user.role !== 'admin') {
+            query.user = req.user.id;
+        }
         // Cerchiamo la prenotazione e ci assicuriamo che appartenga all'utente che sta facendo la richiesta
-        const reservation = await Reservation.findOneAndDelete({
-            _id: reservationId,
-            user: req.user.id
-        });
+        const reservation = await Reservation.findOneAndDelete(query);
+        // - MODIFICA
 
         // Se non troviamo la prenotazione, o non è di questo utente, restituiamo il codice HTTP 404 (Not Found)
         if (!reservation) {

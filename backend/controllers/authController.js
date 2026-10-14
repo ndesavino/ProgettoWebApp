@@ -58,13 +58,15 @@ exports.login = async (req, res) => {
             return res.status(401).json({ message: 'Credenziali non valide' });
         }
 
+        // MODIFICA (ADMIN) -
         // Se tutto è corretto, generiamo il Token JWT
         // Nel contenuto del token salviamo l'id univoco dell'utente
         const token = jwt.sign(
-            { id: user._id },
+            { id: user._id, role: user.role },
             process.env.JWT_SECRET,
             { expiresIn: '1d' } // Il token scadrà automaticamente dopo un giorno
         );
+        // - MODIFICA
 
         // Rispondiamo con codice HTTP 200 (OK) e inviamo il token al frontend
         res.status(200).json({ message: 'Login effettuato con successo', token, userData: { id: user._id, name: user.name, email: user.email }  });
