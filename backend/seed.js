@@ -3,10 +3,10 @@
 
 // Importiamo la libreria Mongoose per connetterci al database ed eseguire operazioni
 const mongoose = require('mongoose');
+const path = require('path');
 
 // Importiamo dotenv per caricare le variabili d'ambiente dal file .env
-// (contiene la stringa di connessione del database)
-require('dotenv').config();
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 // Importiamo i modelli Mongoose per utenti e prenotazioni per interagire con le rispettive collezioni nel db
 const User = require('./models/User');
@@ -30,7 +30,8 @@ async function seed() {
         const sample_user = await User.create({
             name: "Mario Rossi",
             email: "mario.rossi@email.com",
-            password: "password123"
+            password: "password123",
+            role: "client"
         });
 
         console.log('Created user:', sample_user.name);
@@ -40,21 +41,21 @@ async function seed() {
         const reservations = [
             {
                 user: sample_user._id,
-                date: new Date("2026-06-15"),
+                date: new Date("2026-06-15T00:00:00.000Z"),
                 time: "20:30",
                 numberOfPeople: 4,
                 status: "confermata"
             },
             {
                 user: sample_user._id,
-                date: new Date("2026-06-20"),
+                date: new Date("2026-06-20T00:00:00.000Z"),
                 time: "19:30",
                 numberOfPeople: 2,
                 status: "confermata"
             },
             {
                 user: sample_user._id,
-                date: new Date("2026-07-01"),
+                date: new Date("2026-07-01T00:00:00.000Z"),
                 time: "21:00",
                 numberOfPeople: 10,
                 status: "confermata"
@@ -78,4 +79,9 @@ async function seed() {
     }
 }
 
-seed(); // Eseguiamo la funzione
+// Eseguiamo la funzione
+if (require.main === module) {
+    seed();
+}
+
+module.exports = seed;

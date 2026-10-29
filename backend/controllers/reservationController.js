@@ -1,15 +1,35 @@
 // Importiamo il modello Reservation per interagire con le prenotazioni nel database
 const Reservation = require('../models/Reservation');
 
+// Capienza massima consentita per ciascun turno orario
+const MAX_CAPACITY = 50;
+
+// Helper per calcolare l'inizio e la fine della giornata (evita problemi di fuso orario con MongoDB)
+const getDayRange = (dateStr) => {
+    const dateOnly = typeof dateStr === 'string' ? dateStr.split('T')[0] : new Date(dateStr).toISOString().split('T')[0];
+    const startOfDay = new Date(`${dateOnly}T00:00:00.000Z`);
+    const endOfDay = new Date(`${dateOnly}T23:59:59.999Z`);
+    return { dateOnly, startOfDay, endOfDay };
+};
+
 // 1. POST (CREATE)
 // Questa funzione crea una nuova prenotazione (protetta dal middleware "auth.js")
 exports.createReservation = async (req, res) => {
     try {
-        // Estraiamo data, ora e numero di persone inviati dal frontend
         const { date, time, numberOfPeople } = req.body;
 
+        // Validazione numero persone (conversione sicura per evitare concatenazione di stringhe in JS)
+        const peopleNum = parseInt(numberOfPeople, 10);
+        if (isNaN(peopleNum) || peopleNum < 1 || peopleNum > 20) {
+            return res.status(400).json({
+                message: 'Il numero di persone deve essere compreso tra 1 e 20.'
+            });
+        }
+
+        const { dateOnly, startOfDay, endOfDay } = getDayRange(date);
+
         // Controllo date e orari passati
-        const reservationDate = new Date(`${date}T${time}`);
+        const reservationDate = new Date(`${dateOnly}T${time}`);
         const now = new Date();
         if (reservationDate < now) {
             return res.status(400).json({
@@ -17,71 +37,76 @@ exports.createReservation = async (req, res) => {
             });
         }
 
-        // Controllo overbooking
-        const MAX_CAPACITY = 50; // Capienza massima di persone consentita per ciascun turno orario
-        // Cerchiamo le prenotazioni confermate per quella specifica data e quel preciso turno
-        const existingReservations = await Reservation.find({ date, time, status: 'confermata' });
+        // Controllo overbooking per quella specifica data e quel preciso turno orario
+        const existingReservations = await Reservation.find({
+            date: { $gte: startOfDay, $lte: endOfDay },
+            time,
+            status: 'confermata'
+        });
+
         // Sommiamo il numero di persone già prenotate in quel turno
         const currentBookedSeats = existingReservations.reduce((acc, curr) => acc + curr.numberOfPeople, 0);
-        // Se l'aggiunta delle nuove persone supera il limite, blocchiamo la richiesta
-        if (currentBookedSeats + numberOfPeople > MAX_CAPACITY) {
+        if (currentBookedSeats + peopleNum > MAX_CAPACITY) {
+            const remaining = Math.max(0, MAX_CAPACITY - currentBookedSeats);
             return res.status(400).json({
-                message: `Il turno delle ${time} non è disponibile (posti rimanenti: ${MAX_CAPACITY - currentBookedSeats})`
+                message: `Il turno delle ${time} non è disponibile (posti rimanenti: ${remaining})`
             });
         }
 
-        // Creiamo la nuova prenotazione dopo aver superato i controlli
+        // Creiamo la nuova prenotazione dopo aver superato tutti i controlli
         const newReservation = new Reservation({
-            // Il middleware "auth.js" ha estratto dal token req.user.id
-            user: req.user.id, // Colleghiamo la prenotazione a chi ha fatto la richiesta
-            date,
+            user: req.user.id, // Estratto dal token JWT dal middleware auth.js
+            date: startOfDay,
             time,
-            numberOfPeople
+            numberOfPeople: peopleNum,
+            status: 'confermata'
         });
-        await newReservation.save(); // Salviamo la prenotazione nel database
+        await newReservation.save();
 
-        // Recuperiamo Socket.IO globale ed emettiamo l'evento a tutti i client connessi (real-time)
+        // 🔔 REAL-TIME: Notifichiamo tutti i client connessi via Socket.IO
         const io = req.app.get('socketio');
         if (io) {
-            io.emit('notifica-server', `Nuova prenotazione registrata per ${numberOfPeople} persone in data ${date} alle ${time}`);
+            io.emit('notifica-server', `Nuova prenotazione registrata per ${peopleNum} persone in data ${dateOnly} alle ${time}`);
         }
 
-        // Essendo una creazione, usiamo il codice HTTP 201 (Created)
         res.status(201).json({
             message: 'Prenotazione confermata con successo',
             reservation: newReservation
         });
     } catch (error) {
-        // Se l'orario è sbagliato o le persone sono > 20, Mongoose lancerà un errore di validazione (codice HTTP 400)
         res.status(400).json({ message: 'Errore nella creazione della prenotazione', error: error.message });
     }
 };
 
 // 2. GET (READ)
-// Questa funzione permette di visualizzare a un utente solo le sue prenotazioni
+// Visualizza solo le prenotazioni dell'utente autenticato
 exports.getUserReservations = async (req, res) => {
     try {
-        // Cerchiamo nel db tutte le prenotazioni in cui il campo "user" coincide con l'id estratto dal token
-        // Usiamo sort({ date: 1, time: 1 }) per ordinarle cronologicamente dalla più vicina alla più lontana
         const reservations = await Reservation.find({ user: req.user.id }).sort({ date: 1, time: 1 });
-        // Rispondiamo con codice HTTP 200 (OK) e inviamo l'array delle prenotazioni trovate
         res.status(200).json(reservations);
     } catch (error) {
-        // Se c'è un errore imprevisto, rispondiamo con errore HTTP 500 (Internal Server Error)
         res.status(500).json({ message: 'Errore nel recupero delle prenotazioni', error: error.message });
     }
 };
 
 // 3. PUT (UPDATE)
-// Questa funzione permette di modificare una prenotazione esistente
+// Modifica una prenotazione esistente (con verifica proprietà, date future e overbooking)
 exports.updateReservation = async (req, res) => {
     try {
-        // req.params.id rappresenta l'id passato nell'URL
         const reservationId = req.params.id;
         const { date, time, numberOfPeople } = req.body;
 
+        const peopleNum = parseInt(numberOfPeople, 10);
+        if (isNaN(peopleNum) || peopleNum < 1 || peopleNum > 20) {
+            return res.status(400).json({
+                message: 'Il numero di persone deve essere compreso tra 1 e 20.'
+            });
+        }
+
+        const { dateOnly, startOfDay, endOfDay } = getDayRange(date);
+
         // Controllo se la nuova data è nel passato
-        const reservationDate = new Date(`${date}T${time}`);
+        const reservationDate = new Date(`${dateOnly}T${time}`);
         const now = new Date();
         if (reservationDate < now) {
             return res.status(400).json({
@@ -89,40 +114,44 @@ exports.updateReservation = async (req, res) => {
             });
         }
 
-        // Cerchiamo la prenotazione e ci assicuriamo che appartenga a questo utente
-        // Esattamente la stessa logica che si usa per controllare l'autore di una recensione
+        // Cerchiamo la prenotazione assicurandoci che appartenga all'utente loggato
         const reservation = await Reservation.findOne({ _id: reservationId, user: req.user.id });
         if (!reservation) {
             return res.status(404).json({ message: 'Prenotazione non trovata o non autorizzata' });
         }
 
-        // Rifacciamo il controllo overbooking per il nuovo turno
-        const MAX_CAPACITY = 50;
-        // Troviamo tutte le prenotazioni per quella data e orario
-        const allReservationsForTurn = await Reservation.find({ date, time, status: 'confermata' });
+        // Controllo overbooking per il nuovo turno prescelto
+        const allReservationsForTurn = await Reservation.find({
+            date: { $gte: startOfDay, $lte: endOfDay },
+            time,
+            status: 'confermata'
+        });
 
-        // Usiamo un semplice .filter() di JavaScript per escludere dal conteggio la
-        // prenotazione che stiamo modificando, altrimenti conteremmo i posti due volte
+        // Escludiamo la prenotazione in corso di modifica dal conteggio dei posti
         const otherReservations = allReservationsForTurn.filter(
-            (res) => res._id.toString() !== reservationId
+            (item) => item._id.toString() !== reservationId
         );
-
-        // Sommiamo i posti delle altre prenotazioni
         const currentBookedSeats = otherReservations.reduce((acc, curr) => acc + curr.numberOfPeople, 0);
 
-        if (currentBookedSeats + numberOfPeople > MAX_CAPACITY) {
+        if (currentBookedSeats + peopleNum > MAX_CAPACITY) {
+            const remaining = Math.max(0, MAX_CAPACITY - currentBookedSeats);
             return res.status(400).json({
-                message: `Il turno delle ${time} non ha abbastanza posti liberi (rimasti: ${MAX_CAPACITY - currentBookedSeats})`
+                message: `Il turno delle ${time} non ha abbastanza posti liberi (rimasti: ${remaining})`
             });
         }
 
-        // Aggiorniamo i dati della prenotazione sovrascrivendoli
-        reservation.date = date;
+        // Aggiorniamo e salviamo la prenotazione
+        reservation.date = startOfDay;
         reservation.time = time;
-        reservation.numberOfPeople = numberOfPeople;
-
-        // Salviamo le modifiche nel database
+        reservation.numberOfPeople = peopleNum;
         await reservation.save();
+
+        // 🔔 REAL-TIME: Notifica live modifica
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('notifica-server', `Una prenotazione è stata aggiornata per il turno delle ${time} (${dateOnly})`);
+        }
+
         res.status(200).json({
             message: 'Prenotazione aggiornata con successo',
             reservation
@@ -133,28 +162,28 @@ exports.updateReservation = async (req, res) => {
 };
 
 // 4. DELETE (DELETE)
-// Questa funzione elimina una prenotazione specifica tramite il suo id
+// Elimina una prenotazione specifica tramite il suo id
 exports.deleteReservation = async (req, res) => {
     try {
-        // req.params.id rappresenta l'id della prenotazione passato nell'URL (/api/reservations/64b5f...)
         const reservationId = req.params.id;
 
-        // Cerchiamo la prenotazione e ci assicuriamo che appartenga all'utente che sta facendo la richiesta
         const reservation = await Reservation.findOneAndDelete({
             _id: reservationId,
             user: req.user.id
         });
 
-        // Se non troviamo la prenotazione, o non è di questo utente, restituiamo il codice HTTP 404 (Not Found)
         if (!reservation) {
             return res.status(404).json({ message: 'Prenotazione non trovata o non autorizzata.' });
         }
 
-        // Il codice HTTP 204 (No Content) per le eliminazioni
+        // 🔔 REAL-TIME: Notifichiamo che un tavolo è stato liberato
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('notifica-server', `Un tavolo si è liberato per il turno delle ${reservation.time}!`);
+        }
+
         res.status(204).send();
     } catch (error) {
         res.status(500).json({ message: 'Errore durante la cancellazione.', error: error.message });
     }
 };
-
-// (CRUD)
