@@ -6,15 +6,32 @@ export const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
 
+    // Al refresh della pagina, recuperiamo l'utente salvato per non perdere la sessione
+    useEffect(() => {
+        const storedUser = localStorage.getItem("user");
+        const token = localStorage.getItem("token");
+        if (storedUser && token) {
+            try {
+                setUser(JSON.parse(storedUser));
+            } catch (err) {
+                console.error("Errore lettura utente da localStorage", err);
+                localStorage.removeItem("user");
+                localStorage.removeItem("token");
+            }
+        }
+    }, []);
+
     // Funzione asincrona per il login
     const login = async (email, password) => {
         try {
-            // Chiamata HTTP POST al backend
             const response = await api.post("/auth/login", { email, password });
-            const { token, userData } = response.data;
+            const { token, userData, user: userInfo } = response.data;
+            const finalUser = userData || userInfo;
             
             localStorage.setItem("token", token);
-            setUser(userData);
+            localStorage.setItem("user", JSON.stringify(finalUser));
+            setUser(finalUser);
+            return finalUser;
         } catch (error) {
             console.error("Errore di login", error);
             throw error;
@@ -24,6 +41,7 @@ export const AuthProvider = ({ children }) => {
     // Funzione di logout
     const logout = () => {
         localStorage.removeItem("token");
+        localStorage.removeItem("user");
         setUser(null);
     };
 

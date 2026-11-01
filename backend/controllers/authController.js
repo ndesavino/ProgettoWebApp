@@ -62,14 +62,26 @@ exports.login = async (req, res) => {
         // Se tutto è corretto, generiamo il Token JWT
         // Nel contenuto del token salviamo l'id univoco dell'utente
         const token = jwt.sign(
-            { id: user._id, role: user.role },
+            { id: user._id, role: user.role || 'client' },
             process.env.JWT_SECRET,
             { expiresIn: '1d' } // Il token scadrà automaticamente dopo un giorno
         );
         // - MODIFICA
 
-        // Rispondiamo con codice HTTP 200 (OK) e inviamo il token al frontend
-        res.status(200).json({ message: 'Login effettuato con successo', token, userData: { id: user._id, name: user.name, email: user.email }  });
+        const userInfo = {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role || 'client'
+        };
+
+        // Rispondiamo con codice HTTP 200 (OK) e inviamo il token e i dati dell'utente al frontend
+        res.status(200).json({
+            message: 'Login effettuato con successo',
+            token,
+            user: userInfo,
+            userData: userInfo
+        });
     } catch (error) {
         res.status(500).json({ message: 'Errore durante il login', error: error.message });
     }

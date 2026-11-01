@@ -9,6 +9,7 @@ const auth = (req, res, next) => {
     // 1. ESTRAZIONE DEL TOKEN
     // Cerca l'header 'Authorization' nella richiesta HTTP in arrivo
     const authHeader = req.header('Authorization');
+    let token = null;
     // Controlliamo se l'header esiste e se inizia correttamente con "Bearer "
     if (authHeader && authHeader.startsWith("Bearer ")) {
         // Usiamo split per dividere la stringa in corrispondenza dello spazio prendendo solo il token
@@ -31,7 +32,7 @@ const auth = (req, res, next) => {
         // In questo modo, i controllers successivi sapranno esattamente quale utente ha fatto la richiesta
         req.user = decoded;
 
-        // next() dice ad Express di che il controllo è superato e passare la richiesta alla funzione successiva (controller)
+        // next() dice ad Express che il controllo è superato e passare la richiesta alla funzione successiva (controller)
         next();
     } catch (err) {
         // Se la verifica fallisce (es. token scaduto o manomesso), fermiamo tutto e restituiamo errore HTTP 401

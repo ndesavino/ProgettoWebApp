@@ -1,21 +1,20 @@
 // Importiamo le librerie fondamentali
 const express = require('express');
 const http = require('http'); 
-const { Server } = require('socket.io')
+const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path');
 
-// Importiamo dotenv per leggere le variabili d'ambiente (.env)
-require('dotenv').config();
+// Importiamo dotenv puntando in modo assoluto al file .env della cartella backend
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 // Importiamo i nostri file di rotte
 const authRoutes = require('./routes/authRoutes');
 const reservationRoutes = require('./routes/reservationRoutes');
 
 // IMPORTAZIONI SWAGGER
-// Importiamo l'interfaccia grafica direttamente dal pacchetto npm
 const swaggerUi = require('swagger-ui-express');
-// Importiamo le specifiche che abbiamo appena generato nel file swagger.js
 const swaggerSpec = require('./swagger');
 
 // Inizializziamo l'applicazione Express
@@ -26,7 +25,8 @@ const server = http.createServer(app);
 const io = new Server(server, {
     cors: { origin: '*' }
 });
-app.set('socketio', io); // Salviamo l'istanza di Socket.IO dentro Express cosi i controller possono usarla
+app.set('socketio', io); // Salviamo l'istanza di Socket.IO dentro Express così i controller possono usarla
+
 io.on('connection', (socket) => {
     console.log(`Utente connesso (Socket ID: ${socket.id})`);
     socket.emit('notifica-server', 'Ciao dal server backend! Connessione live stabilita.');
@@ -36,28 +36,23 @@ io.on('connection', (socket) => {
 });
 
 // MIDDLEWARE GLOBALI
-// cors() permette al frontend React (che girerà su una porta diversa) di fare richieste a questo backend senza essere bloccato dal browser
 app.use(cors());
-// express.json() intercetta tutte le richieste in arrivo ed estrae i dati in formato JSON per renderli disponibili in req.body
 app.use(express.json());
 
 // CONNESSIONE AL DATABASE MONGODB
-// Usiamo la stringa di connessione salvata nel file .env (MONGODB_URI)
 mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log('Connesso a MongoDB!'))
     .catch((err) => console.error('Errore di connessione a MongoDB:', err));
 
 // MONTAGGIO DI SWAGGER SULLA ROTTA /api-docs
-// Configurazione dell'endpoint per la documentazione Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // AGGANCIO DELLE ROTTE DELLE NOSTRE API
-// Diciamo a Express di passare tutte le richieste HTTP, che iniziano per /api/auth, al router "authRoutes.js"
 app.use('/api/auth', authRoutes);
-// Diciamo a Express di passare tutte le richieste HTTP, che iniziano per /api/reservations, al router "reservationRoutes.js"
 app.use('/api/reservations', reservationRoutes);
 
 // AVVIO DEL SERVER
-const PORT = process.env.PORT || 3000; // Leggiamo la porta dal file .env o usiamo la 3000 come predefinita
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`Server Express e Socket.IO in ascolto sulla porta ${PORT}`);});
+    console.log(`Server Express e Socket.IO in ascolto sulla porta ${PORT}`);
+});
