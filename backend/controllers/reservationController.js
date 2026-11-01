@@ -16,6 +16,7 @@ const getDayRange = (dateStr) => {
 // Questa funzione crea una nuova prenotazione (protetta dal middleware "auth.js")
 exports.createReservation = async (req, res) => {
     try {
+        // Estraiamo data, ora e numero di persone inviati dal frontend
         const { date, time, numberOfPeople } = req.body;
 
         // Validazione numero persone (conversione sicura per evitare concatenazione di stringhe in JS)
@@ -69,11 +70,13 @@ exports.createReservation = async (req, res) => {
             io.emit('notifica-server', `Nuova prenotazione registrata per ${peopleNum} persone in data ${dateOnly} alle ${time}`);
         }
 
+        // Essendo una creazione, usiamo il codice HTTP 201 (Created)
         res.status(201).json({
             message: 'Prenotazione confermata con successo',
             reservation: newReservation
         });
     } catch (error) {
+        // Se l'orario è sbagliato o le persone sono > 20, Mongoose lancerà un errore di validazione (codice HTTP 400)
         res.status(400).json({ message: 'Errore nella creazione della prenotazione', error: error.message });
     }
 };
@@ -82,9 +85,29 @@ exports.createReservation = async (req, res) => {
 // Visualizza solo le prenotazioni dell'utente autenticato
 exports.getUserReservations = async (req, res) => {
     try {
-        const reservations = await Reservation.find({ user: req.user.id }).sort({ date: 1, time: 1 });
+        // MODIFICA (ADMIN) -
+        let reservations;
+        // Implementazione del controllo accessi Se l'utente possiede il ruolo 'admin',
+        // viene restituita l'intera collezione aggregata ai riferimenti utente
+        if (req.user.role === 'admin') {
+            reservations = await Reservation.find({})
+                .populate('user', 'name email')
+                .sort({ date: 1, time: 1 });
+        }
+        // Se l'utente è standard ('client'), la query è filtrata sul proprio ID
+        else {
+            reservations = await Reservation.find({ user: req.user.id })
+                .sort({ date: 1, time: 1 });
+        }
+        // - MODIFICA
+
+        // Cerchiamo nel db tutte le prenotazioni in cui il campo "user" coincide con l'id estratto dal token
+        // Usiamo sort({ date: 1, time: 1 }) per ordinarle cronologicamente dalla più vicina alla più lontana
+
+        // Rispondiamo con codice HTTP 200 (OK) e inviamo l'array delle prenotazioni trovate
         res.status(200).json(reservations);
     } catch (error) {
+        // Se c'è un errore imprevisto, rispondiamo con errore HTTP 500 (Internal Server Error)
         res.status(500).json({ message: 'Errore nel recupero delle prenotazioni', error: error.message });
     }
 };
@@ -93,6 +116,7 @@ exports.getUserReservations = async (req, res) => {
 // Modifica una prenotazione esistente (con verifica proprietà, date future e overbooking)
 exports.updateReservation = async (req, res) => {
     try {
+        // req.params.id rappresenta l'id passato nell'URL
         const reservationId = req.params.id;
         const { date, time, numberOfPeople } = req.body;
 
@@ -114,8 +138,16 @@ exports.updateReservation = async (req, res) => {
             });
         }
 
-        // Cerchiamo la prenotazione assicurandoci che appartenga all'utente loggato
-        const reservation = await Reservation.findOne({ _id: reservationId, user: req.user.id });
+        // MODIFICA (ADMIN) -
+        // Costruiamo la query dinamicamente quindi se non è admin vincoliamo la ricerca anche all'id dell'utente
+        let query = { _id: reservationId };
+        if (req.user.role !== 'admin') {
+            query.user = req.user.id;
+        }
+        // Cerchiamo la prenotazione e ci assicuriamo che appartenga a questo utente
+        const reservation = await Reservation.findOne(query);
+        // - MODIFICA
+
         if (!reservation) {
             return res.status(404).json({ message: 'Prenotazione non trovata o non autorizzata' });
         }
@@ -131,6 +163,8 @@ exports.updateReservation = async (req, res) => {
         const otherReservations = allReservationsForTurn.filter(
             (item) => item._id.toString() !== reservationId
         );
+
+        // Sommiamo i posti delle altre prenotazioni
         const currentBookedSeats = otherReservations.reduce((acc, curr) => acc + curr.numberOfPeople, 0);
 
         if (currentBookedSeats + peopleNum > MAX_CAPACITY) {
@@ -165,13 +199,20 @@ exports.updateReservation = async (req, res) => {
 // Elimina una prenotazione specifica tramite il suo id
 exports.deleteReservation = async (req, res) => {
     try {
+        // req.params.id rappresenta l'id della prenotazione passato nell'URL (/api/reservations/64b5f...)
         const reservationId = req.params.id;
 
-        const reservation = await Reservation.findOneAndDelete({
-            _id: reservationId,
-            user: req.user.id
-        });
+        // MODIFICA (ADMIN) -
+        // Costruiamo la query dinamicamente quindi se è admin rimuove qualsiasi prenotazione, altrimenti solo la propria
+        let query = { _id: reservationId };
+        if (req.user.role !== 'admin') {
+            query.user = req.user.id;
+        }
+        // Cerchiamo la prenotazione e ci assicuriamo che appartenga all'utente che sta facendo la richiesta
+        const reservation = await Reservation.findOneAndDelete(query);
+        // - MODIFICA
 
+        // Se non troviamo la prenotazione, o non è di questo utente, restituiamo il codice HTTP 404 (Not Found)
         if (!reservation) {
             return res.status(404).json({ message: 'Prenotazione non trovata o non autorizzata.' });
         }
@@ -187,3 +228,5 @@ exports.deleteReservation = async (req, res) => {
         res.status(500).json({ message: 'Errore durante la cancellazione.', error: error.message });
     }
 };
+
+// (CRUD)
